@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Prospect" ADD COLUMN     "timeInCurrentHarem" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
