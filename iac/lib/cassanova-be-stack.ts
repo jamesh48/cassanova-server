@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib'
+import { SsmAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
@@ -169,87 +170,137 @@ export class CassanovaBackendStack extends cdk.Stack {
 		this.migrationsBucket.grantRead(dbInstanceRole)
 
 		// Upload Prisma files to S3 on every deployment
-		// Note: We need both the prisma/ folder AND the root prisma.config.ts
-		new s3deploy.BucketDeployment(this, 'UploadPrismaFiles', {
-			sources: [
-				// Upload everything from the prisma directory
-				s3deploy.Source.asset(prismaPath),
-				// Also upload prisma.config.ts from the parent directory
-				s3deploy.Source.asset(`${prismaPath}/..`, {
-					// Only include prisma.config.ts
-					exclude: ['*', '!prisma.config.ts'],
-				}),
-			],
-			destinationBucket: this.migrationsBucket,
-			destinationKeyPrefix: 'prisma',
-			exclude: ['node_modules/*', '*.db', '*.db-journal', '.env*'],
-			// This ensures new deployments overwrite old files
-			prune: true,
-		})
+		const prismaDeployment = new s3deploy.BucketDeployment(
+			this,
+			'UploadPrismaFiles',
+			{
+				sources: [
+					// Upload everything from the prisma directory
+					s3deploy.Source.asset(prismaPath),
+					// Also upload prisma.config.ts from the parent directory
+					s3deploy.Source.asset(`${prismaPath}/..`, {
+						// Only include prisma.config.ts
+						exclude: ['*', '!prisma.config.ts'],
+					}),
+				],
+				destinationBucket: this.migrationsBucket,
+				destinationKeyPrefix: 'prisma',
+				exclude: ['node_modules/*', '*.db', '*.db-journal', '.env*'],
+				// This ensures new deployments overwrite old files
+				prune: true,
+			},
+		)
+
+		// Create a unique version identifier for migrations
+		const migrationVersion = Date.now().toString()
 
 		// Custom resource to run migrations via SSM
-		const _migrationRunner = new cr.AwsCustomResource(
+		const migrationRunner = new cr.AwsCustomResource(
 			this,
 			'RunPrismaMigrations',
 			{
 				onCreate: {
 					service: 'SSM',
-					action: 'sendCommand',
+					action: 'SendCommand',
 					parameters: {
 						DocumentName: 'AWS-RunShellScript',
 						InstanceIds: [databaseInstanceId],
 						Parameters: {
 							commands: [
 								'#!/bin/bash',
-								'set -e',
+								// Exit on error, print commands
+								'set -ex',
+								'',
+								'echo "🚀 Starting Prisma migration process..."',
 								'',
 								'# Create working directory',
-								'mkdir -p /opt/prisma-migrations',
+								'sudo mkdir -p /opt/prisma-migrations',
 								'cd /opt/prisma-migrations',
 								'',
+								'# Clean up old files',
+								'sudo rm -rf prisma prisma.config.ts',
+								'',
 								'# Download prisma.config.ts to root',
-								`sudo aws s3 cp s3://${this.migrationsBucket.bucketName}/prisma/prisma.config.ts ./prisma.config.ts`,
+								`echo "📥 Downloading from S3 bucket: ${this.migrationsBucket.bucketName}"`,
+								`sudo aws s3 cp s3://${this.migrationsBucket.bucketName}/prisma/prisma.config.ts ./prisma.config.ts || echo "⚠️ prisma.config.ts not found"`,
 								'',
 								'# Download Prisma folder',
 								`sudo aws s3 sync s3://${this.migrationsBucket.bucketName}/prisma/ ./prisma/ --delete`,
 								'',
+								'# Verify files downloaded',
+								'echo "📂 Files in /opt/prisma-migrations:"',
+								'ls -la',
+								'echo "📂 Files in /opt/prisma-migrations/prisma:"',
+								'ls -la prisma/ || echo "❌ prisma directory not found!"',
+								'',
 								'# Install Node.js if not present',
 								'if ! command -v node &> /dev/null; then',
+								'  echo "📦 Installing Node.js..."',
 								'  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -',
 								'  sudo apt-get install -y nodejs',
 								'fi',
 								'',
-								'# Install Prisma dependencies and TypeScript (needed for Prisma 7)',
-								'sudo npm install @prisma/client prisma typescript ts-node @types/node dotenv --legacy-peer-deps',
+								'echo "📦 Node version: $(node --version)"',
+								'echo "📦 NPM version: $(npm --version)"',
+								'',
+								'# Install Prisma dependencies',
+								'echo "📦 Installing Prisma dependencies..."',
+								'sudo npm install @prisma/client prisma typescript ts-node @types/node dotenv --legacy-peer-deps 2>&1 | tail -20',
+								'',
+								'# Verify Prisma installation',
+								'npx prisma --version',
+								'',
+								'# Set DATABASE_URL',
+								`export DATABASE_URL="postgresql://postgres:${props.databasePassword}@localhost:5432/${dbName}"`,
+								'echo "🔗 DATABASE_URL configured (password hidden)"',
+								'',
+								'# Check migration status before running',
+								'echo "📊 Current migration status:"',
+								'npx prisma migrate status || echo "⚠️ No migrations applied yet"',
 								'',
 								'# Run migrations',
-								`export DATABASE_URL="postgresql://postgres:${props.databasePassword}@localhost:5432/${dbName}"`,
+								'echo "🔄 Running migrations..."',
 								'npx prisma migrate deploy',
 								'',
-								'echo "✅ Prisma migrations completed successfully"',
+								'# Verify migration status after running',
+								'echo "✅ Final migration status:"',
+								'npx prisma migrate status',
+								'',
+								`echo "✅ Prisma migrations completed successfully (version: ${migrationVersion})"`,
 							],
 						},
 					},
-					physicalResourceId: cr.PhysicalResourceId.of(Date.now().toString()),
+					physicalResourceId: cr.PhysicalResourceId.of(
+						`migration-${migrationVersion}`,
+					),
 				},
 				onUpdate: {
 					service: 'SSM',
-					action: 'sendCommand',
+					action: 'SendCommand',
 					parameters: {
 						DocumentName: 'AWS-RunShellScript',
 						InstanceIds: [databaseInstanceId],
 						Parameters: {
 							commands: [
 								'#!/bin/bash',
-								'set -e',
+								'set -ex',
+								'',
+								'echo "🔄 Updating Prisma migrations..."',
 								'',
 								'cd /opt/prisma-migrations',
 								'',
+								'# Clean up old files',
+								'sudo rm -rf prisma prisma.config.ts',
+								'',
 								'# Download prisma.config.ts to root',
-								`sudo aws s3 cp s3://${this.migrationsBucket.bucketName}/prisma/prisma.config.ts ./prisma.config.ts`,
+								`echo "📥 Downloading from S3 bucket: ${this.migrationsBucket.bucketName}"`,
+								`sudo aws s3 cp s3://${this.migrationsBucket.bucketName}/prisma/prisma.config.ts ./prisma.config.ts || echo "⚠️ prisma.config.ts not found"`,
 								'',
 								'# Download Prisma folder',
 								`sudo aws s3 sync s3://${this.migrationsBucket.bucketName}/prisma/ ./prisma/ --delete`,
+								'',
+								'# Verify files',
+								'ls -la prisma/migrations/ || echo "❌ No migrations directory!"',
 								'',
 								'# Install Node.js if not present',
 								'if ! command -v node &> /dev/null; then',
@@ -258,25 +309,38 @@ export class CassanovaBackendStack extends cdk.Stack {
 								'fi',
 								'',
 								'# Ensure dependencies are installed',
-								'sudo npm install @prisma/client prisma typescript ts-node @types/node dotenv --legacy-peer-deps',
+								'sudo npm install @prisma/client prisma typescript ts-node @types/node dotenv --legacy-peer-deps 2>&1 | tail -20',
 								'',
 								'# Run migrations',
 								`export DATABASE_URL="postgresql://postgres:${props.databasePassword}@localhost:5432/${dbName}"`,
+								'',
+								'echo "📊 Migration status before update:"',
+								'npx prisma migrate status',
+								'',
+								'echo "🔄 Deploying migrations..."',
 								'npx prisma migrate deploy',
 								'',
-								'echo "✅ Prisma migrations completed successfully"',
+								'echo "✅ Migration status after update:"',
+								'npx prisma migrate status',
+								'',
+								`echo "✅ Prisma migrations updated successfully (version: ${migrationVersion})"`,
 							],
 						},
 					},
-					physicalResourceId: cr.PhysicalResourceId.of(Date.now().toString()),
+					physicalResourceId: cr.PhysicalResourceId.of(
+						`migration-${migrationVersion}`,
+					),
 				},
 				policy: cr.AwsCustomResourcePolicy.fromSdkCalls({
 					resources: cr.AwsCustomResourcePolicy.ANY_RESOURCE,
 				}),
 				// Increase timeout for migration commands
-				timeout: cdk.Duration.minutes(10),
+				timeout: cdk.Duration.minutes(15),
 			},
 		)
+
+		// Ensure migrations run AFTER S3 deployment completes
+		migrationRunner.node.addDependency(prismaDeployment)
 
 		// Output the S3 bucket name for reference
 		new cdk.CfnOutput(this, 'MigrationsBucketName', {
@@ -284,8 +348,13 @@ export class CassanovaBackendStack extends cdk.Stack {
 			description: 'S3 bucket containing Prisma migrations',
 		})
 
+		new cdk.CfnOutput(this, 'MigrationsVersion', {
+			value: migrationVersion,
+			description: 'Current migration version',
+		})
+
 		new cdk.CfnOutput(this, 'MigrationsStatus', {
-			value: 'Migrations will run automatically on every deployment',
+			value: 'Migrations run automatically on every deployment via SSM',
 			description: 'Migration deployment status',
 		})
 
