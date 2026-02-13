@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "strict": true,
-    "target": "es2023",
-    "module": "esnext",
-    "lib": ["dom", "es6", "es2017", "esnext.asynciterable"],
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
     "skipLibCheck": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "removeComments": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -22,7 +22,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
+    "baseUrl": "."
   },
   "exclude": ["node_modules"],
   "include": ["./src/**/*.ts"],

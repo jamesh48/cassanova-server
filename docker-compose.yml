@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: localpassword
+      POSTGRES_DB: cassanova
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3030:3030"
+    environment:
+      DATABASE_URL: postgresql://postgres:localpassword@postgres:5432/cassanova
+      NODE_ENV: development
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:

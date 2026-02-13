@@ -14,10 +14,13 @@ datasource db {
 }
 
 model User {
-  id         Int     @id @default(autoincrement())
-  email      String  @unique
-  alias_name String?
-  harems     Harem[]
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  alias_name   String?
+  harems       Harem[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Harem {
