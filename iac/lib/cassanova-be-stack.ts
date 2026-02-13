@@ -1,5 +1,4 @@
 import * as cdk from 'aws-cdk-lib'
-import { SsmAction } from 'aws-cdk-lib/aws-cloudwatch-actions'
 import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as ecs from 'aws-cdk-lib/aws-ecs'
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2'
