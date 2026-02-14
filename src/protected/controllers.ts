@@ -1,43 +1,8 @@
-import { type NextFunction, type Request, type Response, Router } from 'express'
+import type { Request, Response } from 'express'
 
-import jwt from 'jsonwebtoken'
-import { JWT_SECRET } from '../../constants'
-import { prisma } from '../../prisma'
+import { prisma } from '../prisma'
 
-const router = Router()
-
-const asyncHandler = (
-	fn: (
-		req: Request,
-		res: Response,
-		next: NextFunction,
-	) => Promise<Response<unknown, Record<string, unknown>>>,
-) => {
-	return (req: Request, res: Response, next: NextFunction) => {
-		Promise.resolve(fn(req, res, next)).catch(next)
-	}
-}
-
-// Middleware to verify JWT token
-const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-	const authHeader = req.headers.authorization
-	// Bearer TOKEN
-	const token = authHeader?.split(' ')[1]
-
-	if (!token) {
-		return res.status(401).json({ error: 'Access token required' })
-	}
-
-	return jwt.verify(token, JWT_SECRET, (err, decoded) => {
-		if (err) {
-			return res.status(403).json({ error: 'Invalid or expired token' })
-		}
-		req.userId = (decoded as { userId: number }).userId
-		return next()
-	})
-}
-
-const getUserHarems = async (req: Request, res: Response) => {
+export const getUserHarems = async (req: Request, res: Response) => {
 	const userId = req.userId
 
 	const harems = await prisma.harem.findMany({
@@ -58,7 +23,7 @@ const getUserHarems = async (req: Request, res: Response) => {
 	return res.json(harems)
 }
 
-const reorderHarems = async (req: Request, res: Response) => {
+export const reorderHarems = async (req: Request, res: Response) => {
 	const userId = req.userId
 
 	const harems = req.body as Array<{ id: number; order: number }>
@@ -97,7 +62,7 @@ const reorderHarems = async (req: Request, res: Response) => {
 	return res.json({ message: 'Harems reordered successfully' })
 }
 
-const createUserHarem = async (req: Request, res: Response) => {
+export const createUserHarem = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { name } = req.body
 
@@ -123,7 +88,7 @@ const createUserHarem = async (req: Request, res: Response) => {
 	return res.status(201).json(result)
 }
 
-const createProspect = async (req: Request, res: Response) => {
+export const createProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { name, haremId } = req.body
 
@@ -167,7 +132,7 @@ const createProspect = async (req: Request, res: Response) => {
 	return res.status(201).json(result)
 }
 
-const updateHarem = async (req: Request, res: Response) => {
+export const updateHarem = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params
 	const { name } = req.body
@@ -193,7 +158,7 @@ const updateHarem = async (req: Request, res: Response) => {
 	return res.json(updated)
 }
 
-const updateProspect = async (req: Request, res: Response) => {
+export const updateProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params
 	const { name, hotLead } = req.body
@@ -248,7 +213,7 @@ const updateProspect = async (req: Request, res: Response) => {
 	return res.json(updated)
 }
 
-const deleteProspect = async (req: Request, res: Response) => {
+export const deleteProspect = async (req: Request, res: Response) => {
 	const { id } = req.params
 
 	// Verify ownership
@@ -267,7 +232,7 @@ const deleteProspect = async (req: Request, res: Response) => {
 	return res.json(deleted)
 }
 
-const moveProspect = async (req: Request, res: Response) => {
+export const moveProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { prospectId, newHaremId } = req.body
 
@@ -330,7 +295,7 @@ const moveProspect = async (req: Request, res: Response) => {
 	return res.json(updated)
 }
 
-const reorderProspects = async (req: Request, res: Response) => {
+export const reorderProspects = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const prospects = req.body as Array<{ id: number; haremOrder: number }>
 
@@ -390,7 +355,7 @@ const reorderProspects = async (req: Request, res: Response) => {
 	return res.json({ message: 'Prospects reordered successfully' })
 }
 
-const deleteHarem = async (req: Request, res: Response) => {
+export const deleteHarem = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params // Use params instead of query for DELETE
 
@@ -432,43 +397,10 @@ const deleteHarem = async (req: Request, res: Response) => {
 	return res.json({ message: 'Harem deleted successfully' })
 }
 
-router.get('/user-harems', authenticateToken, asyncHandler(getUserHarems))
-
-router.post('/user-harems', authenticateToken, createUserHarem)
-router.put('/user-harems/:id', authenticateToken, asyncHandler(updateHarem))
-router.delete('/user-harems/:id', authenticateToken, asyncHandler(deleteHarem))
-router.put('/prospects/:id', authenticateToken, asyncHandler(updateProspect))
-router.delete('/prospects/:id', authenticateToken, asyncHandler(deleteProspect))
-router.post('/reorder-harems', authenticateToken, reorderHarems)
-router.post(
-	'/reorder-prospects',
-	authenticateToken,
-	asyncHandler(reorderProspects),
-)
-router.post('/move-prospect', authenticateToken, asyncHandler(moveProspect))
-router.get(
-	'/seed-harems',
-	authenticateToken,
-	async (req: Request, res: Response) => {
-		const userId = req.userId
-		console.info(userId)
-
-		return res.send('ok')
-	},
-)
-
-router.post('/prospect', authenticateToken, createProspect)
-
-router.get(
-	'/validate-token',
-	authenticateToken,
-	(req: Request, res: Response) => {
-		// If we reach here, the token is valid (authenticateToken middleware passed)
-		return res.status(200).json({
-			valid: true,
-			userId: req.userId,
-		})
-	},
-)
-
-export default router
+export const validateToken = async (req: Request, res: Response) => {
+	// If we reach here, the token is valid (authenticateToken middleware passed)
+	return res.status(200).json({
+		valid: true,
+		userId: req.userId,
+	})
+}

@@ -11,9 +11,14 @@ const postgresPassword = process.env.POSTGRES_PASSWORD
 const awsDefaultSg = process.env.AWS_DEFAULT_SG
 const awsVpcId = process.env.AWS_VPC_ID
 const awsClusterArn = process.env.AWS_CLUSTER_ARN
+const jwtSecret = process.env.JWT_SECRET
 
 if (!postgresPassword) {
 	throw new Error('POSTGRES_PASSWORD env not defined!')
+}
+
+if (!jwtSecret) {
+	throw new Error('JWT_SECRET env not defined!')
 }
 
 if (!awsDefaultSg) {
@@ -31,6 +36,7 @@ if (!awsClusterArn) {
 new CassanovaBackendStack(app, 'CassanovaBackendStack', {
 	// Database password (same as in your infrastructure repo)
 	databasePassword: postgresPassword,
+	containerEnv: { jwtSecret },
 	// Optional: database name (default is 'postgres')
 	databaseName: 'postgres',
 

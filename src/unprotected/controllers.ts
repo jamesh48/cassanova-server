@@ -1,47 +1,15 @@
 import bcrypt from 'bcrypt'
-import { Router } from 'express'
+import type { Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { JWT_SECRET, TOKEN_EXPIRY } from '../../constants'
-import { prisma } from '../../prisma'
+import { JWT_SECRET, TOKEN_EXPIRY } from '../constants'
+import { prisma } from '../prisma'
+import { validateEmail, validatePassword } from '../utils'
 
-const router = Router()
-
-// Password validation helper
-const validatePassword = (
-	password: string,
-): { valid: boolean; errors: string[] } => {
-	const errors: string[] = []
-
-	if (password.length < 8) {
-		errors.push('Password must be at least 8 characters long')
-	}
-	if (!/[a-z]/.test(password)) {
-		errors.push('Password must contain at least one lowercase letter')
-	}
-	if (!/[A-Z]/.test(password)) {
-		errors.push('Password must contain at least one uppercase letter')
-	}
-	if (!/[0-9]/.test(password)) {
-		errors.push('Password must contain at least one number')
-	}
-	if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
-		errors.push('Password must contain at least one special character')
-	}
-
-	return {
-		valid: errors.length === 0,
-		errors,
-	}
+export const healthcheck = async (_req: Request, res: Response) => {
+	return res.send('Cassanova App is Healthy!')
 }
 
-// Email validation helper
-const validateEmail = (email: string): boolean => {
-	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-	return emailRegex.test(email)
-}
-
-// Register endpoint - creates new user with hashed password
-router.post('/user', async (req, res) => {
+export const createUser = async (req: Request, res: Response) => {
 	const { email, password } = req.body
 
 	if (!email || !password) {
@@ -95,10 +63,9 @@ router.post('/user', async (req, res) => {
 		console.error('Error creating user:', error)
 		return res.status(500).json({ error: 'Failed to create user' })
 	}
-})
+}
 
-// Login endpoint - validates password and generates JWT token
-router.post('/login', async (req, res) => {
+export const userLogin = async (req: Request, res: Response) => {
 	const { email, password } = req.body
 
 	if (!email || !password) {
@@ -137,9 +104,9 @@ router.post('/login', async (req, res) => {
 		console.error('Login error:', error)
 		return res.status(500).json({ error: 'Login failed' })
 	}
-})
+}
 
-router.get('/user-count', async (_req, res) => {
+export const getUserCount = async (_req: Request, res: Response) => {
 	try {
 		const count = await prisma.user.count()
 		return res.json({ success: true, userCount: count })
@@ -147,10 +114,4 @@ router.get('/user-count', async (_req, res) => {
 		const typedError = error as { message: string }
 		return res.status(500).json({ error: typedError.message })
 	}
-})
-
-router.get('/healthcheck', async (_req, res) => {
-	return res.send('Cassanova App is Healthy!')
-})
-
-export default router
+}

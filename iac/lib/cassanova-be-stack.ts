@@ -26,6 +26,9 @@ interface CassanovaBackendStackProps extends cdk.StackProps {
 	 */
 	prismaPath?: string
 
+	containerEnv: {
+		jwtSecret: string
+	}
 	aws_env: {
 		AWS_CLUSTER_ARN: string
 		AWS_DEFAULT_SG: string
@@ -94,6 +97,7 @@ export class CassanovaBackendStack extends cdk.Stack {
 				environment: {
 					DATABASE_URL: `postgresql://postgres:${props.databasePassword}@${postgresIp}:5432/${dbName}`,
 					NODE_ENV: 'production',
+					...props.containerEnv,
 				},
 				image: ecs.ContainerImage.fromAsset('../'),
 				logging: new ecs.AwsLogDriver({

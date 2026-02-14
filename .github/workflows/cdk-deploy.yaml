@@ -49,6 +49,7 @@ jobs:
           AWS_DEFAULT_SG: ${{ vars.AWS_DEFAULT_SG }}
           AWS_VPC_ID: ${{ vars.AWS_VPC_ID }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Deployment complete
         run: echo "✅ Backend deployed successfully"

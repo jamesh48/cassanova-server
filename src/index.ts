@@ -1,6 +1,6 @@
 import app from './app'
-import protectedRoutes from './protected/controllers'
-import unprotectedRoutes from './unprotected/controllers'
+import protectedRoutes from './protected/router'
+import unprotectedRoutes from './unprotected/router'
 
 // Register routes
 app.use('/api', unprotectedRoutes)
