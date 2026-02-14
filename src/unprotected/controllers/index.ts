@@ -139,7 +139,7 @@ router.post('/login', async (req, res) => {
 	}
 })
 
-router.get('/test-db', async (_req, res) => {
+router.get('/user-count', async (_req, res) => {
 	try {
 		const count = await prisma.user.count()
 		return res.json({ success: true, userCount: count })
