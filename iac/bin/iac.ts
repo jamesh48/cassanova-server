@@ -36,7 +36,7 @@ if (!awsClusterArn) {
 new CassanovaBackendStack(app, 'CassanovaBackendStack', {
 	// Database password (same as in your infrastructure repo)
 	databasePassword: postgresPassword,
-	containerEnv: { jwtSecret },
+	containerEnv: { JWT_SECRET: jwtSecret },
 	// Optional: database name (default is 'postgres')
 	databaseName: 'postgres',
 

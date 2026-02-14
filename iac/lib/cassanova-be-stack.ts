@@ -27,7 +27,7 @@ interface CassanovaBackendStackProps extends cdk.StackProps {
 	prismaPath?: string
 
 	containerEnv: {
-		jwtSecret: string
+		JWT_SECRET: string
 	}
 	aws_env: {
 		AWS_CLUSTER_ARN: string
