@@ -90,7 +90,7 @@ export const createUserHarem = async (req: Request, res: Response) => {
 
 export const createProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
-	const { name, haremId } = req.body
+	const { name, haremId, notes } = req.body
 
 	if (!name || typeof name !== 'string' || name.trim().length === 0) {
 		return res.status(400).json({ error: 'Prospect name is required' })
@@ -125,6 +125,7 @@ export const createProspect = async (req: Request, res: Response) => {
 			name: name.trim(),
 			haremId,
 			haremOrder: newOrder,
+			notes,
 			hotLead: false,
 		},
 	})
