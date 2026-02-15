@@ -161,7 +161,7 @@ export const updateHarem = async (req: Request, res: Response) => {
 export const updateProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params
-	const { name, hotLead } = req.body
+	const { name, hotLead, notes } = req.body
 
 	// Validation
 	if (
@@ -194,7 +194,7 @@ export const updateProspect = async (req: Request, res: Response) => {
 	}
 
 	// Build update data object with only provided fields
-	const updateData: { name?: string; hotLead?: boolean } = {}
+	const updateData: { name?: string; hotLead?: boolean, notes?: string } = {}
 
 	if (name !== undefined) {
 		updateData.name = name.trim()
@@ -202,6 +202,10 @@ export const updateProspect = async (req: Request, res: Response) => {
 
 	if (hotLead !== undefined) {
 		updateData.hotLead = hotLead
+	}
+
+	if (notes !== undefined) {
+		updateData.notes = notes
 	}
 
 	// Update prospect
