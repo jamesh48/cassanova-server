@@ -304,8 +304,6 @@ export const reorderProspects = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const prospects = req.body as Array<{ id: number; haremOrder: number }>
 
-	console.info(req.body)
-
 	// Validation
 	if (!Array.isArray(prospects) || prospects.length === 0) {
 		return res.status(400).json({ error: 'Invalid prospects data' })
@@ -408,4 +406,15 @@ export const validateToken = async (req: Request, res: Response) => {
 		valid: true,
 		userId: req.userId,
 	})
+}
+
+export const getCurrentUser = async (req: Request, res: Response) => {
+	const userId = req.userId
+
+	const user = await prisma.user.findUnique({
+		where: { id: userId },
+		select: { email: true, alias_name: true },
+	})
+
+	return res.send(user)
 }

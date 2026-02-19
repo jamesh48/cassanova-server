@@ -5,6 +5,7 @@ import {
 	createUserHarem,
 	deleteHarem,
 	deleteProspect,
+	getCurrentUser,
 	getUserHarems,
 	moveProspect,
 	reorderHarems,
@@ -17,7 +18,7 @@ import {
 const router = Router()
 
 router.get('/user-harems', authenticateToken, asyncHandler(getUserHarems))
-
+router.get('/user', authenticateToken, asyncHandler(getCurrentUser))
 router.post('/user-harems', authenticateToken, asyncHandler(createUserHarem))
 router.put('/user-harems/:id', authenticateToken, asyncHandler(updateHarem))
 router.delete('/user-harems/:id', authenticateToken, asyncHandler(deleteHarem))
