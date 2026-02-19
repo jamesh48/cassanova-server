@@ -18,8 +18,10 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:localpassword@postgres:5432/cassanova
       NODE_ENV: development
+      JWT_SECRET: local-dev-jwt-secret
     depends_on:
       - postgres
+    command: sh -c "yarn prisma migrate deploy && node dist/src/index.js"
 
 volumes:
   postgres_data:

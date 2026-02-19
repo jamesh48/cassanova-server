@@ -6,6 +6,7 @@ WORKDIR /app
 # Copy package files
 COPY package.json yarn.lock ./
 COPY tsconfig.json ./
+COPY prisma.config.ts ./
 
 # Install dependencies
 RUN yarn install --frozen-lockfile
@@ -14,7 +15,7 @@ RUN yarn install --frozen-lockfile
 COPY src ./src
 COPY prisma ./prisma
 
-# Generate Prisma Client
+# Generate Prisma Client (DATABASE_URL not needed for generation)
 RUN yarn prisma generate
 
 # Build TypeScript
@@ -30,6 +31,7 @@ RUN apk add --no-cache dumb-init
 
 # Copy package files
 COPY package.json yarn.lock ./
+COPY prisma.config.ts ./
 
 # Install production dependencies only
 RUN yarn install --frozen-lockfile --production && yarn cache clean
