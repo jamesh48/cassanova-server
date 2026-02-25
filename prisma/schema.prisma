@@ -37,10 +37,15 @@ model Prospect {
   name               String
   harem              Harem?   @relation(fields: [haremId], references: [id])
   haremId            Int?
-  notes              String   @default("")
   hotLead            Boolean  @default(false)
   haremOrder         Int      @default(0)
   timeInCurrentHarem DateTime @default(now())
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @default(now()) @updatedAt
+  // Prospect Details
+  location           String   @default("")
+  age                Int      @default(18)
+  occupation         String   @default("")
+  notes              String   @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }

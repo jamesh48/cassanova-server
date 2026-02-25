@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Prospect" ADD COLUMN     "age" INTEGER NOT NULL DEFAULT 18,
+ADD COLUMN     "location" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "occupation" TEXT NOT NULL DEFAULT '';

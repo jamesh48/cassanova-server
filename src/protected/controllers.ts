@@ -90,7 +90,7 @@ export const createUserHarem = async (req: Request, res: Response) => {
 
 export const createProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
-	const { name, haremId, notes } = req.body
+	const { name, haremId, occupation, age, notes } = req.body
 
 	if (!name || typeof name !== 'string' || name.trim().length === 0) {
 		return res.status(400).json({ error: 'Prospect name is required' })
@@ -127,6 +127,8 @@ export const createProspect = async (req: Request, res: Response) => {
 			haremOrder: newOrder,
 			notes,
 			hotLead: false,
+			occupation,
+			age,
 		},
 	})
 
@@ -162,7 +164,7 @@ export const updateHarem = async (req: Request, res: Response) => {
 export const updateProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params
-	const { name, hotLead, notes } = req.body
+	const { name, hotLead, occupation, age, notes } = req.body
 
 	// Validation
 	if (
@@ -195,10 +197,20 @@ export const updateProspect = async (req: Request, res: Response) => {
 	}
 
 	// Build update data object with only provided fields
-	const updateData: { name?: string; hotLead?: boolean, notes?: string } = {}
+	const updateData: {
+		name?: string
+		hotLead?: boolean
+		notes?: string
+		occupation?: string
+		age?: number
+	} = {}
 
 	if (name !== undefined) {
 		updateData.name = name.trim()
+	}
+
+	if (age !== undefined) {
+		updateData.age = Number(age)
 	}
 
 	if (hotLead !== undefined) {
@@ -207,6 +219,10 @@ export const updateProspect = async (req: Request, res: Response) => {
 
 	if (notes !== undefined) {
 		updateData.notes = notes
+	}
+
+	if (occupation !== undefined) {
+		updateData.occupation = occupation
 	}
 
 	// Update prospect
@@ -360,7 +376,7 @@ export const reorderProspects = async (req: Request, res: Response) => {
 
 export const deleteHarem = async (req: Request, res: Response) => {
 	const userId = req.userId
-	const { id } = req.params // Use params instead of query for DELETE
+	const { id } = req.params
 
 	// Validate ID
 	const haremId = Number(id)
