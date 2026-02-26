@@ -203,7 +203,7 @@ export const updateProspect = async (req: Request, res: Response) => {
 		hotLead?: boolean
 		notes?: string
 		occupation?: string
-		age?: number
+		age?: number | null
 		location?: string
 	} = {}
 
@@ -212,7 +212,11 @@ export const updateProspect = async (req: Request, res: Response) => {
 	}
 
 	if (age !== undefined) {
-		updateData.age = Number(age)
+		if (age === null) {
+			updateData.age = null
+		} else {
+			updateData.age = Number(age)
+		}
 	}
 
 	if (hotLead !== undefined) {
