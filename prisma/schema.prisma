@@ -42,7 +42,7 @@ model Prospect {
   timeInCurrentHarem DateTime @default(now())
   // Prospect Details
   location           String   @default("")
-  age                Int      @default(18)
+  age                Int?
   occupation         String   @default("")
   notes              String   @default("")
 
