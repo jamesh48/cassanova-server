@@ -439,7 +439,19 @@ export const getCurrentUser = async (req: Request, res: Response) => {
 
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { email: true, alias_name: true },
+		select: { email: true, alias_name: true, userLocation: true },
+	})
+
+	return res.send(user)
+}
+
+export const updateCurrentUser = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const { userLocation } = req.body
+
+	const user = await prisma.user.update({
+		where: { id: userId },
+		data: { userLocation },
 	})
 
 	return res.send(user)

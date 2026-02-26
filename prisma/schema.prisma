@@ -19,6 +19,7 @@ model User {
   passwordHash String
   alias_name   String?
   harems       Harem[]
+  userLocation String   @default("")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

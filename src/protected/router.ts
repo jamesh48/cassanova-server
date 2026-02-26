@@ -10,6 +10,7 @@ import {
 	moveProspect,
 	reorderHarems,
 	reorderProspects,
+	updateCurrentUser,
 	updateHarem,
 	updateProspect,
 	validateToken,
@@ -19,6 +20,7 @@ const router = Router()
 
 router.get('/user-harems', authenticateToken, asyncHandler(getUserHarems))
 router.get('/user', authenticateToken, asyncHandler(getCurrentUser))
+router.patch('/user', authenticateToken, asyncHandler(updateCurrentUser))
 router.post('/user-harems', authenticateToken, asyncHandler(createUserHarem))
 router.put('/user-harems/:id', authenticateToken, asyncHandler(updateHarem))
 router.delete('/user-harems/:id', authenticateToken, asyncHandler(deleteHarem))
