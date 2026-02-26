@@ -90,7 +90,7 @@ export const createUserHarem = async (req: Request, res: Response) => {
 
 export const createProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
-	const { name, haremId, occupation, age, notes } = req.body
+	const { name, haremId, occupation, location, age, notes } = req.body
 
 	if (!name || typeof name !== 'string' || name.trim().length === 0) {
 		return res.status(400).json({ error: 'Prospect name is required' })
@@ -129,6 +129,7 @@ export const createProspect = async (req: Request, res: Response) => {
 			hotLead: false,
 			occupation,
 			age,
+			location,
 		},
 	})
 
@@ -164,7 +165,7 @@ export const updateHarem = async (req: Request, res: Response) => {
 export const updateProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params
-	const { name, hotLead, occupation, age, notes } = req.body
+	const { name, hotLead, occupation, age, location, notes } = req.body
 
 	// Validation
 	if (
@@ -203,6 +204,7 @@ export const updateProspect = async (req: Request, res: Response) => {
 		notes?: string
 		occupation?: string
 		age?: number
+		location?: string
 	} = {}
 
 	if (name !== undefined) {
@@ -223,6 +225,10 @@ export const updateProspect = async (req: Request, res: Response) => {
 
 	if (occupation !== undefined) {
 		updateData.occupation = occupation
+	}
+
+	if (location !== undefined) {
+		updateData.location = location
 	}
 
 	// Update prospect
