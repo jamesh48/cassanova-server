@@ -19,6 +19,7 @@ model User {
   passwordHash String
   alias_name   String?
   harems       Harem[]
+  tags         Tag[]
   userLocation String   @default("")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -47,6 +48,27 @@ model Prospect {
   occupation         String   @default("")
   notes              String   @default("")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  tags      ProspectTag[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now()) @updatedAt
+}
+
+model Tag {
+  id        Int           @id @default(autoincrement())
+  name      String
+  user      User          @relation(fields: [userId], references: [id])
+  userId    Int
+  prospects ProspectTag[]
+  createdAt DateTime      @default(now())
+
+  @@unique([userId, name])
+}
+
+model ProspectTag {
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+  prospectId Int
+  tag        Tag      @relation(fields: [tagId], references: [id])
+  tagId      Int
+
+  @@id([prospectId, tagId])
 }

@@ -1,13 +1,18 @@
 import { Router } from 'express'
 import { asyncHandler, authenticateToken } from '../utils'
 import {
+	addTagToProspect,
 	createProspect,
+	createTag,
 	createUserHarem,
 	deleteHarem,
 	deleteProspect,
+	deleteTag,
 	getCurrentUser,
 	getUserHarems,
+	getUserTags,
 	moveProspect,
+	removeTagFromProspect,
 	reorderHarems,
 	reorderProspects,
 	updateCurrentUser,
@@ -35,5 +40,12 @@ router.post(
 router.post('/move-prospect', authenticateToken, asyncHandler(moveProspect))
 router.post('/prospect', authenticateToken, createProspect)
 router.get('/validate-token', authenticateToken, asyncHandler(validateToken))
+
+// Tags
+router.get('/tags', authenticateToken, asyncHandler(getUserTags))
+router.post('/tags', authenticateToken, asyncHandler(createTag))
+router.delete('/tags/:id', authenticateToken, asyncHandler(deleteTag))
+router.post('/prospects/:id/tags', authenticateToken, asyncHandler(addTagToProspect))
+router.delete('/prospects/:id/tags/:tagId', authenticateToken, asyncHandler(removeTagFromProspect))
 
 export default router

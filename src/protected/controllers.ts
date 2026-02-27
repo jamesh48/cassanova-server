@@ -9,6 +9,7 @@ export const getUserHarems = async (req: Request, res: Response) => {
 		where: { userId },
 		include: {
 			prospects: {
+				include: { tags: { include: { tag: true } } },
 				omit: { haremId: true },
 				orderBy: [
 					{ hotLead: 'desc' }, // Hot leads first
@@ -455,4 +456,134 @@ export const updateCurrentUser = async (req: Request, res: Response) => {
 	})
 
 	return res.send(user)
+}
+
+// Tags
+export const getUserTags = async (req: Request, res: Response) => {
+	const userId = req.userId
+
+	const tags = await prisma.tag.findMany({
+		where: { userId },
+		orderBy: { name: 'asc' },
+	})
+
+	return res.json(tags)
+}
+
+export const createTag = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const { name } = req.body
+
+	if (!userId) {
+		return res.status(401).json({ error: 'Unauthorized' })
+	}
+
+	if (!name || typeof name !== 'string' || name.trim().length === 0) {
+		return res.status(400).json({ error: 'Tag name is required' })
+	}
+
+	const existing = await prisma.tag.findUnique({
+		where: { userId_name: { userId, name: name.trim() } },
+	})
+
+	if (existing) {
+		return res.status(409).json({ error: 'Tag already exists' })
+	}
+
+	const tag = await prisma.tag.create({
+		data: { name: name.trim(), userId },
+	})
+
+	return res.status(201).json(tag)
+}
+
+export const deleteTag = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const tagId = Number(req.params.id)
+
+	if (Number.isNaN(tagId)) {
+		return res.status(400).json({ error: 'Invalid tag ID' })
+	}
+
+	const tag = await prisma.tag.findUnique({ where: { id: tagId } })
+
+	if (!tag || tag.userId !== userId) {
+		return res.status(404).json({ error: 'Tag not found' })
+	}
+
+	await prisma.$transaction([
+		prisma.prospectTag.deleteMany({ where: { tagId } }),
+		prisma.tag.delete({ where: { id: tagId } }),
+	])
+
+	return res.json({ message: 'Tag deleted successfully' })
+}
+
+export const addTagToProspect = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const prospectId = Number(req.params.id)
+	const { tagId } = req.body
+
+	if (Number.isNaN(prospectId) || typeof tagId !== 'number') {
+		return res
+			.status(400)
+			.json({ error: 'Valid prospect ID and tag ID are required' })
+	}
+
+	// Verify prospect belongs to user's harem
+	const prospect = await prisma.prospect.findUnique({
+		where: { id: prospectId },
+		include: { harem: true },
+	})
+
+	if (!prospect || prospect.harem?.userId !== userId) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Prospect does not belong to you' })
+	}
+
+	// Verify tag belongs to user
+	const tag = await prisma.tag.findUnique({ where: { id: tagId } })
+
+	console.info('xx', tag, userId)
+	if (!tag || tag.userId !== userId) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Tag does not belong to you' })
+	}
+
+	console.info('yy', prospectId)
+	const prospectTag = await prisma.prospectTag.create({
+		data: { prospectId, tagId },
+	})
+
+	return res.status(201).json(prospectTag)
+}
+
+export const removeTagFromProspect = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const prospectId = Number(req.params.id)
+	const tagId = Number(req.params.tagId)
+
+	if (Number.isNaN(prospectId) || Number.isNaN(tagId)) {
+		return res.status(400).json({ error: 'Invalid prospect ID or tag ID' })
+	}
+
+	// Verify prospect belongs to user's harem
+	const prospect = await prisma.prospect.findUnique({
+		where: { id: prospectId },
+		include: { harem: true },
+	})
+
+	if (!prospect || prospect.harem?.userId !== userId) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Prospect does not belong to you' })
+	}
+
+	await prisma.prospectTag.delete({
+		where: { prospectId_tagId: { prospectId, tagId } },
+	})
+
+	return res.json({ message: 'Tag removed from prospect' })
 }
