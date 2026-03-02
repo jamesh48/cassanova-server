@@ -43,6 +43,7 @@ model Prospect {
   haremOrder         Int      @default(0)
   timeInCurrentHarem DateTime @default(now())
   // Prospect Details
+  phoneNumber        String   @default("")
   location           String   @default("")
   age                Int?
   occupation         String   @default("")
