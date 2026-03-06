@@ -9,7 +9,10 @@ export const getUserHarems = async (req: Request, res: Response) => {
 		where: { userId },
 		include: {
 			prospects: {
-				include: { tags: { include: { tag: true } } },
+				include: {
+					tags: { include: { tag: true } },
+					notes: { orderBy: { createdAt: 'desc' }, take: 1 },
+				},
 				omit: { haremId: true },
 				orderBy: [
 					{ hotLead: 'desc' }, // Hot leads first
@@ -21,7 +24,15 @@ export const getUserHarems = async (req: Request, res: Response) => {
 		orderBy: { order: 'asc' },
 	})
 
-	return res.json(harems)
+	const result = harems.map((harem) => ({
+		...harem,
+		prospects: harem.prospects.map(({ notes, ...prospect }) => ({
+			...prospect,
+			mostRecentNote: notes[0] ?? null,
+		})),
+	}))
+
+	return res.json(result)
 }
 
 export const reorderHarems = async (req: Request, res: Response) => {
@@ -91,8 +102,7 @@ export const createUserHarem = async (req: Request, res: Response) => {
 
 export const createProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
-	const { name, haremId, occupation, location, phoneNumber, age, notes } =
-		req.body
+	const { name, haremId, occupation, location, phoneNumber, age } = req.body
 
 	if (!name || typeof name !== 'string' || name.trim().length === 0) {
 		return res.status(400).json({ error: 'Prospect name is required' })
@@ -127,7 +137,6 @@ export const createProspect = async (req: Request, res: Response) => {
 			name: name.trim(),
 			haremId,
 			haremOrder: newOrder,
-			notes,
 			hotLead: false,
 			occupation,
 			age,
@@ -168,8 +177,7 @@ export const updateHarem = async (req: Request, res: Response) => {
 export const updateProspect = async (req: Request, res: Response) => {
 	const userId = req.userId
 	const { id } = req.params
-	const { name, hotLead, occupation, age, location, phoneNumber, notes } =
-		req.body
+	const { name, hotLead, occupation, age, phoneNumber, location } = req.body
 
 	// Validation
 	if (
@@ -205,7 +213,6 @@ export const updateProspect = async (req: Request, res: Response) => {
 	const updateData: {
 		name?: string
 		hotLead?: boolean
-		notes?: string
 		occupation?: string
 		age?: number | null
 		location?: string
@@ -226,10 +233,6 @@ export const updateProspect = async (req: Request, res: Response) => {
 
 	if (hotLead !== undefined) {
 		updateData.hotLead = hotLead
-	}
-
-	if (notes !== undefined) {
-		updateData.notes = notes
 	}
 
 	if (occupation !== undefined) {
@@ -566,6 +569,131 @@ export const addTagToProspect = async (req: Request, res: Response) => {
 	})
 
 	return res.status(201).json(prospectTag)
+}
+
+// Notes
+export const getProspectNotes = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const prospectId = Number(req.params.id)
+
+	if (Number.isNaN(prospectId)) {
+		return res.status(400).json({ error: 'Invalid prospect ID' })
+	}
+
+	const prospect = await prisma.prospect.findUnique({
+		where: { id: prospectId },
+		include: { harem: true },
+	})
+
+	if (!prospect || prospect.harem?.userId !== userId) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Prospect does not belong to you' })
+	}
+
+	const notes = await prisma.prospectNote.findMany({
+		where: { prospectId },
+		orderBy: { createdAt: 'desc' },
+	})
+
+	return res.json(notes)
+}
+
+export const createProspectNote = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const prospectId = Number(req.params.id)
+	const { content } = req.body
+
+	if (Number.isNaN(prospectId)) {
+		return res.status(400).json({ error: 'Invalid prospect ID' })
+	}
+
+	if (!content || typeof content !== 'string' || content.trim().length === 0) {
+		return res.status(400).json({ error: 'Note content is required' })
+	}
+
+	const prospect = await prisma.prospect.findUnique({
+		where: { id: prospectId },
+		include: { harem: true },
+	})
+
+	if (!prospect || prospect.harem?.userId !== userId) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Prospect does not belong to you' })
+	}
+
+	const note = await prisma.prospectNote.create({
+		data: { content: content.trim(), prospectId },
+	})
+
+	return res.status(201).json(note)
+}
+
+export const updateProspectNote = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const prospectId = Number(req.params.id)
+	const noteId = Number(req.params.noteId)
+	const { content } = req.body
+
+	if (Number.isNaN(prospectId) || Number.isNaN(noteId)) {
+		return res.status(400).json({ error: 'Invalid prospect ID or note ID' })
+	}
+
+	if (!content || typeof content !== 'string' || content.trim().length === 0) {
+		return res.status(400).json({ error: 'Note content is required' })
+	}
+
+	const note = await prisma.prospectNote.findUnique({
+		where: { id: noteId },
+		include: { prospect: { include: { harem: true } } },
+	})
+
+	if (
+		!note ||
+		note.prospectId !== prospectId ||
+		note.prospect.harem?.userId !== userId
+	) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Note does not belong to you' })
+	}
+
+	const updated = await prisma.prospectNote.update({
+		where: { id: noteId },
+		data: { content: content.trim() },
+	})
+
+	return res.json(updated)
+}
+
+export const deleteProspectNote = async (req: Request, res: Response) => {
+	const userId = req.userId
+	const prospectId = Number(req.params.id)
+	const noteId = Number(req.params.noteId)
+
+	if (Number.isNaN(prospectId) || Number.isNaN(noteId)) {
+		return res.status(400).json({ error: 'Invalid prospect ID or note ID' })
+	}
+
+	const note = await prisma.prospectNote.findUnique({
+		where: { id: noteId },
+		include: { prospect: { include: { harem: true } } },
+	})
+
+	if (
+		!note ||
+		note.prospectId !== prospectId ||
+		note.prospect.harem?.userId !== userId
+	) {
+		return res
+			.status(403)
+			.json({ error: 'Unauthorized: Note does not belong to you' })
+	}
+
+	await prisma.prospectNote.delete({ where: { id: noteId } })
+
+	return res.json({ message: 'Note deleted successfully' })
 }
 
 export const removeTagFromProspect = async (req: Request, res: Response) => {

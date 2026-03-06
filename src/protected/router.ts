@@ -3,12 +3,16 @@ import { asyncHandler, authenticateToken } from '../utils'
 import {
 	addTagToProspect,
 	createProspect,
+	createProspectNote,
 	createTag,
 	createUserHarem,
 	deleteHarem,
 	deleteProspect,
+	deleteProspectNote,
 	deleteTag,
 	getCurrentUser,
+	getProspectNotes,
+	updateProspectNote,
 	getUserHarems,
 	getUserTags,
 	moveProspect,
@@ -40,6 +44,12 @@ router.post(
 router.post('/move-prospect', authenticateToken, asyncHandler(moveProspect))
 router.post('/prospect', authenticateToken, createProspect)
 router.get('/validate-token', authenticateToken, asyncHandler(validateToken))
+
+// Notes
+router.get('/prospects/:id/notes', authenticateToken, asyncHandler(getProspectNotes))
+router.post('/prospects/:id/notes', authenticateToken, asyncHandler(createProspectNote))
+router.patch('/prospects/:id/notes/:noteId', authenticateToken, asyncHandler(updateProspectNote))
+router.delete('/prospects/:id/notes/:noteId', authenticateToken, asyncHandler(deleteProspectNote))
 
 // Tags
 router.get('/tags', authenticateToken, asyncHandler(getUserTags))

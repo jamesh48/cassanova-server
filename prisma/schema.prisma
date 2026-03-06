@@ -47,8 +47,8 @@ model Prospect {
   location           String   @default("")
   age                Int?
   occupation         String   @default("")
-  notes              String   @default("")
 
+  notes     ProspectNote[]
   tags      ProspectTag[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @default(now()) @updatedAt
@@ -63,6 +63,15 @@ model Tag {
   createdAt DateTime      @default(now())
 
   @@unique([userId, name])
+}
+
+model ProspectNote {
+  id         Int      @id @default(autoincrement())
+  content    String
+  prospect   Prospect @relation(fields: [prospectId], references: [id])
+  prospectId Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model ProspectTag {
